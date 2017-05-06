@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<body onload=" loadSinWave(event)">
+    <div class="container" tabindex = "1">
+        <div class="bottom_wrapper">
+            <div
+                id="color_display"
+                tabindex="2"
+            >
+            </div>
+            <div>
+                <button class="btn" onclick="toggleOscVol()" onkeydown="setNote(event.key)">Turn Osc On</button>
+                <button class="btn" onclick="doBtn1()">btn1</button>
+                <button class="btn" onclick="doBtn1()">btn2</button>
+                <button class="btn" onclick="doBtn1()">btn3</button>
+            </div>
+        </div>
+        <div class="top_wrapper">
+            <h2 class="bold">0.2.01 Color Exploration</h2> 
+            <div id="text_display">
+            <p id="demo">
+                Coordinates:
+            </p>
+            <p id="keyPress">
+                key = ?
+            </p>
+            </div>
+        </div>
+    </div>
+    
+    
+</body>
+<script>
+    var audio_context = window.AudioContext || window.webkitAudioContext;
+    
+    var con = new audio_context();
+    
+    var osc = con.createOscillator();
+    var lfo = con.createOscillator();
+    var vol = con.createGain();
+    
+    var lfo_amp = con.createGain();
+    var playing = false;
+    var cur_freq = 200;
+    var offset_freq = 0;
+    var keyMappings = {
+            // first row
+            z: 130.81, // c3
+            x: 146.83, // d
+            c: 164.81, // e
+            v: 174.61, // f
+            b: 196.00, // g
+            n: 220.00, // a
+            m: 246.94, // b
+            ',': 261.63, // c4 = middle c
+            // second row
+            s: 138.59, // c#/Db
+            d: 155.56, // d#/Eb 
+            g: 185.00, // f#/Gb
+            h: 207.65, // g#/Ab
+            j: 233.08, // a#/Bb
+            // third row
+            q: 261.63, // c4 = middle c
+            w: 293.66, // d
+            e: 329.63, // e
+            r: 349.23, // f
+            t: 392.00, // g
+            y: 440.00, // a
+            u: 493.88, // b
+            i: 523.25, // c5
+            // fourth row
+            2: 277.18, // Db/C#
+            3: 311.13, // Eb
+            5: 369.99, // Gb
+            6: 415.30, // Ab
+            7: 466.16 // Bb
+    };
+    // set variable to manipulate container, button and color_display divs  
+    var numSins = 33,
+    sinPadding = 2,
+    sinHeight = 15,
+    ctnr = document.querySelector('.container'),
+    btn = document.querySelector('.btn'),
+    color_display = document.querySelector('#color_display'),
+    // create a canvas element which later we will dynamically add via insertBefore()
+    canvas = document.createElement('canvas'),
+    canvasWidth = color_display.clientWidth, //innerWidth, //window.innerWidth, //canvas.width = maindiv.width, //window.innerWidth,
+    canvasHeight = numSins * (sinHeight + sinPadding), //canvas.height = window.innerHeight,
+    ctx = canvas.getContext('2d'),
+    heightScale = 0.866;
+    
+    lfo_amp.gain.value = 200;
+    
+    osc.frequency.value = cur_freq;
+    lfo.frequency.value = 15;
+    vol.gain.value = 0.00;
+        
+    lfo.connect(lfo_amp);
+    lfo_amp.connect(osc.frequency);
+    //osc.connect(con.destination);
+    osc.connect(vol);
+    vol.connect(con.destination);
+    
+    osc.start();
+    lfo.start();
+
+    // this function is called when the user
+    // presses a key on the keboard
+    // it receives the key they pressed as 'key'
+    
+    function setNote(key){
+        var formatted;
+            
+        // look at the value of key (the key the user pressed)
+        // and do different things depending what it is
+        if (key in keyMappings){
+            // play corresponding frequency
+            osc.frequency.value = keyMappings[key];
+        } else {
+            osc.frequency.value = Math.random() * 3000 + 400;
+        }
+        cur_freq = osc.frequency.value + offset_freq;
+        formatted =Math.floor(osc.frequency.value * 100)/100;
+        document.getElementById("keyPress").innerHTML = "Key : " + key + "; Frequency:" + formatted;
+        color_display.style.backgroundColor = 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+        
+    }
+    
+    function toggleOscVol() {
+        loadSinWave(null);
+        if (playing) {
+            vol.gain.value = 0;
+            ctnr.style.backgroundColor = 'maroon';
+            playing = false;
+            btn.innerHTML = 'Turn Osc On';
+        } else {
+            ctnr.style.backgroundColor = '#441122';
+            playing = true;
+            btn.innerHTML = 'Turn Osc Off';
+            //alert("starting, playing:" + playing);
+            vol.gain.value = 1;
+        }
+    }
+
+    //This function is called when user move the mouse
+    //And print the mouse coordinates on screen
+    function setFrequency(e) {
+        var x = e.clientX;
+        var y = e.clientY;
+        var coor = "Coordinates: (" + x + "," + y + ")";
+    
+        document.getElementById("demo").innerHTML = coor;
+        
+        lfo.frequency.value = event.clientX;
+        offset_freq = (event.clientY - ctnr.height)/20;
+        osc.frequency.value = cur_freq + offset_freq;
+    }
+    function loadSinWave(e) {
+        var txt = 'sin = \n',
+        counter = 0.3,
+        sintext = document.getElementById("demo").innerHTML; //cdocument.getElementById("sin");
+        for (var i = 0; i<32; ++i) {
+            txt += Math.sin(counter * i) + "\n";
+            //console.log(Math.sin(counter*i));
+        }
+        sintext.innerHTML = txt;
+        document.getElementById("keyPress").innerHTML = txt;
+    }
+    function rendersin() {
+        console.log('canvasHeight:' + canvasHeight + '; canvasWidth:' + canvasWidth + ' ; sinHeight:' + sinHeight);
+        //var canvasWidth = window.innerWidth; //canvas.width = maindiv.width, //window.innerWidth,
+        ctx.fillStyle = 'rgb(0,0,0)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.lineWidth = 1;
+        //canvas.width = canvasWidth;
+        //canvas.height = canvasHeight;// window.innerHeight;
+        //canvasHeight = window.innerHeight;
+        var w = canvasWidth; //ctnr.clientWidth; //canvasWidth * heightScale;
+    
+        var hueStart = Math.random()*10 -5,
+        curHue = hueStart;
+        var triSide = 60;
+        var halfSide = triSide / 2;
+        //var rowHeight = Math.floor(triSide * heightScale);
+        //var columns = Math.ceil(canvasWidth / triSide) + 1;
+        //var rows = Math.ceil(canvasHeight / rowHeight);
+    
+        var col, row;
+        var frequency = 0.3;
+        //w = 400;
+        //var h = 14,
+        //padding = 4;
+        for (var i = 0; i < numSins; ++i) {
+            var s = Math.sin(frequency * i) * canvasWidth/2; // w/2;
+            var sn = Math.sin(frequency * i);
+            var hue = hueStart + (i * 3);
+    
+            var x = s<0?canvasWidth/2+s:canvasWidth/2;//s<0?w/2+s:w/2;//s + w*2;//col * rowHeight; //triSide;
+            var y = i * sinHeight + sinPadding;// h + padding; //rowHeight;
+            var clr;
+            clr = 'hsl(' + hue*6 + ', 50%, ' + (60-(curHue+i*i/64)) + '%)';
+            ctx.fillStyle = clr;
+            ctx.strokeStyle = clr;
+            /*ctx.beginPath();
+            ctx.moveTo(x, y);*/
+            var l = Math.abs(s);// s<0?w:w+s;
+            console.log('l:' + l + '; x:' + x + ' ; y:' + y + '; s' + s);
+            ctx.fillRect(x,y, l, sinHeight); // h);
+            /*ctx.lineTo(x + triSide, y);
+            ctx.lineTo(x + halfSide, y + rowHeight);
+            ctx.closePath();*/
+            ctx.fill();
+            //ctx.stroke();
+    
+        }
+        function RGB2Color(r,g,b) {
+            return '#' + byte2Hex(r) + byte2Hex(g) + byte2Hex(b);
+        }
+        function byte2Hex(n) {
+            var nybHexString = "0123456789ABCDEF";
+            return String(nybHexString.substr((n >> 4) & 0x0F,1)) + nybHexString.substr(n & 0x0F,1);
+        }
+        function RGB2Color(r,g,b) {
+            return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+        }
+    }
+    ctnr.insertBefore(canvas, ctnr.firstChild);
+    
+    rendersin();
+    
+    ctnr.addEventListener('dblclick', rendersin);
+
+</script>
+<style>
+    body {
+        display: flex;
+        flex-flow: column nowrap;
+        justify-content: flex-start; /*space-between; /*flex-start | flex-end | center | space-between | space-around */
+        align-items: flex-start; /*flex-start, flex-end, center, baseline, stretch;*/
+        margin: 20px;
+        height: 100%;
+        width: 100%;
+        background-color: #100010;
+        color: #a011ff;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-size: 14px;
+        /*justify-content: space-around;*/
+    }
+    .container {
+        display: flex;
+        flex-direction: column;
+        /*justify-content: flex-end; /*space-between;*/
+        /*justify-content: flex-end; /*space-between; /*flex-start | flex-end | center | space-between | space-around */
+        background: maroon;
+        width: 365px;
+        height: 85%;
+        color:orange;
+        border-radius: 10px;
+        padding: 10px 20px;
+        justify-content: space-between;
+        /*outline: none;*/
+    }
+    canvas {
+        display: block;
+        outline: 2px dotted red;
+    }
+    #text_display {
+        display: flex;
+        flex-direction: column;
+        /*justify-content: flex-end; /*space-between;*/
+        /*justify-content: flex-end; /*space-between; /*flex-start | flex-end | center | space-between | space-around */
+        background: #000011;
+        /*width: 89%;*/
+        margin: 5px 0px;
+        /*height: 85%;*/
+        /*color:orange;*/
+        border-radius: 10px;
+        padding: 0px 20px;
+        /*justify-content: space-around; /*space-between;*/
+        
+        
+        box-sizing: border-box;
+        border-radius: 10px;
+        width: 100%;
+        resize: none;
+        border-width: 0px;
+        
+        background-color: darkslateblue;
+        color: tan; /*thistle;/*;darkorchid;/*tomato;*/
+        outline: none;
+    }
+    .bottom_wrapper {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;/*flex-end;/*flex-start | flex-end | center | space-between | space-around */
+        align-self: auto;
+        outline: none;
+    }
+    textarea {
+        box-sizing: border-box;
+        border-radius: 10px;
+        width: 100%;
+        resize: none;
+        border-width: 0px;
+        
+        background-color: darkslateblue;
+        color: coral;
+        outline: none;
+        user-select: none;
+        
+    }
+    h2 {
+        background-color: inherit;/*#441122;*/
+        padding: 5px 5px 5px 10px;
+        border-radius: 10px;
+        margin: 5px;
+        /*justify-content: flex-start; /*space-around; */
+        align-self: center; /**/
+        text-align: center;
+        outline: none;
+        user-select: none;
+    }
+    .btn {
+        background-color: darkslateblue;
+        color: lightsteelblue;
+        margin: 3px;
+        outline: none;
+    }
+    #color_display {
+        background: coral;
+        height: 100px;
+        color:orange;
+        border-radius: 10px;
+        padding: 10px 20px;
+        outline: none;
+    }
+    button
+    {
+        margin: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        font-size: 16px;
+        background-color: midnightblue;
+        color: lightsteelblue;
+        margin: 3px;
+        /*justify-content: flex-end; */
+        align-self: center; /*auto | flex-start | flex-end | center | baseline | stretch*/
+    }
+</style>
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+    <body onload="loadSinWave(event)">
+        <div class="container" tabindex = "1">
+            <p id="sin">
+                Some Text
+            </p>
+        </div>
+    </body>
+    <script>
+        /*  
+        
+        var fieldNameElement = document.getElementById('field_name');
+        el.innerHTML='';
+            el.appendChild(document.createTextNode("yo"));
+        */
+        var counter = 0.3,
+        txt = '',
+        sintext = document.getElementById("sin");
+        //sintext.innerHTML='';
+        
+        function loadSinWave(e) {
+            for (var i = 0; i<32; ++i) {
+                txt += Math.sin(counter * i);
+                console.log(Math.sin(counter*i));
+            }
+            sintext.innerHTML = txt;
+        }
+    </script>
+    <style>
+        body {
+            background-color: black;
+        }
+    </style>
+</html> -->
